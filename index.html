@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Darts Scorekeeper</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+  :root {
+    --bg:#0f0f13;--surface:#1a1a22;--surface2:#22222e;--border:#2e2e3e;
+    --accent:#e8ff47;--text:#f0f0f5;--muted:#6b6b80;
+    --blue:#4d9fff;--bust:#ff5c5c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{width:100%;height:100%;overflow:hidden;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
+  #app{width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;}
+
+  .screen{display:none;flex-direction:column;width:100%;height:100%;overflow:hidden;}
+  .screen.active{display:flex;}
+
+  /* SPLASH */
+  #splash{align-items:center;justify-content:center;gap:14px;background:var(--bg);padding:24px;position:relative;overflow:hidden;}
+  #splash::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(232,255,71,0.08) 0%,transparent 60%);pointer-events:none;}
+  .splash-bullseye{width:150px;height:150px;border-radius:50%;flex-shrink:0;background:conic-gradient(#1a1a22 0deg,#1a1a22 30deg,#e8ff47 30deg,#e8ff47 60deg,#1a1a22 60deg,#1a1a22 90deg,#e8ff47 90deg,#e8ff47 120deg,#1a1a22 120deg,#1a1a22 150deg,#e8ff47 150deg,#e8ff47 180deg,#1a1a22 180deg,#1a1a22 210deg,#e8ff47 210deg,#e8ff47 240deg,#1a1a22 240deg,#1a1a22 270deg,#e8ff47 270deg,#e8ff47 300deg,#1a1a22 300deg,#1a1a22 330deg,#e8ff47 330deg,#e8ff47 360deg);display:flex;align-items:center;justify-content:center;position:relative;animation:spinIn 0.8s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 0 60px rgba(232,255,71,0.2);}
+  .splash-bullseye::before{content:'';position:absolute;border-radius:50%;width:100px;height:100px;background:var(--bg);}
+  .splash-bullseye::after{content:'';position:absolute;border-radius:50%;width:52px;height:52px;background:var(--accent);z-index:1;}
+  .bull-center{position:absolute;width:20px;height:20px;border-radius:50%;background:#e63030;z-index:2;}
+  @keyframes spinIn{from{transform:rotate(-180deg) scale(0);opacity:0;}to{transform:rotate(0) scale(1);opacity:1;}}
+  .splash-title{font-family:'Bebas Neue',sans-serif;font-size:56px;letter-spacing:4px;line-height:1;}
+  .splash-sub{color:var(--muted);font-size:12px;letter-spacing:3px;text-transform:uppercase;}
+  .splash-btn{margin-top:10px;padding:15px 44px;background:var(--accent);color:#0f0f13;font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:1px;text-transform:uppercase;border:none;border-radius:4px;cursor:pointer;box-shadow:0 4px 0 #9aaa00;transition:transform 0.15s,box-shadow 0.15s;}
+  .splash-btn:hover{transform:translateY(-2px);box-shadow:0 6px 0 #9aaa00;}
+  .splash-btn:active{transform:translateY(2px);box-shadow:0 2px 0 #9aaa00;}
+  .splash-stats-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:13px;padding:8px 24px;border-radius:4px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+  .splash-stats-btn:hover{border-color:var(--muted);}
+
+  /* SETTINGS */
+  #settings{background:var(--bg);}
+  .top-bar{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+  .back-btn{width:34px;height:34px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .top-bar h2{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;}
+  .scroll-body{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:12px;max-width:480px;width:100%;margin:0 auto;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;}
+  .card h3{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:10px;}
+  .toggle-group{display:flex;background:var(--bg);border-radius:8px;padding:3px;gap:3px;}
+  .tog{flex:1;padding:7px;border:none;border-radius:6px;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;}
+  .tog.on{background:var(--surface2);color:var(--accent);border:1px solid var(--border);}
+  .lbl{font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;}
+  .inp{width:100%;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color 0.15s;}
+  .inp:focus{border-color:var(--accent);}
+  .counter-row{display:flex;align-items:center;justify-content:space-between;}
+  .counter-ctrl{display:flex;align-items:center;gap:10px;}
+  .cnt-btn{width:30px;height:30px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:bold;}
+  .cnt-val{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;min-width:20px;text-align:center;}
+  .player-block{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+  .player-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px;}
+  .start-btn{width:100%;padding:14px;background:var(--accent);color:#0f0f13;font-weight:700;font-size:14px;letter-spacing:1px;text-transform:uppercase;border:none;border-radius:8px;cursor:pointer;flex-shrink:0;}
+
+  /* GAME */
+  #game{background:var(--bg);}
+  .game-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+  .game-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;}
+  .hdr-btns{display:flex;gap:6px;}
+  .ico-btn{width:34px;height:34px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .banner{padding:6px 14px;text-align:center;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;min-height:30px;display:flex;align-items:center;justify-content:center;}
+  .win-banner{padding:12px 14px;text-align:center;background:linear-gradient(135deg,rgba(232,255,71,0.15),rgba(232,255,71,0.05));border-bottom:2px solid var(--accent);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--accent);flex-shrink:0;}
+  .game-body{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .scoreboard{display:grid;gap:8px;padding:8px;flex:1;min-height:0;overflow:hidden;}
+  .scoreboard.single{grid-template-columns:1fr;max-width:380px;margin:0 auto;width:100%;}
+  .scoreboard.two{grid-template-columns:1fr 1fr;}
+  .team-col{background:var(--surface);border:2px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;transition:border-color 0.2s;min-height:0;}
+  .team-col.active{border-color:var(--accent);}
+  .team-col-hdr{padding:10px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;}
+  .team-col.active .team-col-hdr{background:rgba(232,255,71,0.08);}
+  .team-name{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);}
+  .team-score{font-family:'Bebas Neue',sans-serif;font-size:44px;line-height:1;color:var(--text);}
+  .team-col.active .team-score{color:var(--accent);}
+  .turns-list{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:3px;}
+  .turn-item{padding:6px 8px;border-radius:7px;cursor:pointer;background:var(--surface2);border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+  .turn-item:hover{background:var(--border);}
+  .turn-item.bust{background:rgba(255,92,92,0.1);border-color:rgba(255,92,92,0.3);}
+  .t-num{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;}
+  .t-darts{display:flex;gap:2px;margin-top:2px;}
+  .d-chip{font-size:9px;padding:1px 4px;background:var(--bg);border-radius:3px;color:var(--muted);font-family:'DM Mono',monospace;}
+  .t-pts{font-family:'DM Mono',monospace;font-size:11px;font-weight:600;}
+  .t-rem{font-size:9px;color:var(--muted);}
+  .bust-tag{font-size:9px;color:var(--bust);font-weight:700;}
+  .no-turns{text-align:center;padding:12px;font-size:11px;color:var(--muted);}
+
+  /* BOTTOM PANEL */
+  .bot-panel{border-top:1px solid var(--border);background:var(--surface);padding:10px 14px 14px;flex-shrink:0;}
+  .panel-in{max-width:420px;margin:0 auto;}
+  .shooter-lbl{text-align:center;margin-bottom:6px;font-size:12px;color:var(--muted);}
+  .shooter-name{color:var(--blue);font-weight:700;}
+  .co-box{text-align:center;padding:6px 10px;background:rgba(77,159,255,0.08);border:1px solid rgba(77,159,255,0.2);border-radius:8px;margin-bottom:8px;}
+  .co-lbl{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--blue);margin-bottom:1px;}
+  .co-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:600;}
+  .darts-disp{display:flex;justify-content:center;gap:8px;margin-bottom:8px;}
+  .dart-slot{width:46px;height:46px;border-radius:9px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:16px;font-weight:600;transition:all 0.15s;}
+  .dart-slot.cur{border-color:var(--accent);background:rgba(232,255,71,0.08);color:var(--accent);}
+  .dart-slot.fil{background:var(--surface2);color:var(--text);}
+  .dart-slot.emp{color:var(--border);}
+  .tog-kp-btn{display:flex;align-items:center;justify-content:center;gap:5px;margin:0 auto 8px;padding:5px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;width:fit-content;}
+  .dart-status{display:flex;justify-content:center;gap:6px;margin-bottom:6px;}
+  .d-badge{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+  .d-badge.cur{background:rgba(232,255,71,0.1);color:var(--accent);border-color:var(--accent);}
+  .d-badge.mult{background:rgba(255,213,0,0.1);color:#ffd500;border-color:rgba(255,213,0,0.3);}
+  .keypad{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .kb{height:44px;border-radius:7px;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:14px;font-weight:600;transition:all 0.1s;background:var(--surface2);color:var(--text);border-bottom:3px solid var(--bg);display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;}
+  .kb:hover{background:var(--border);}
+  .kb:active{transform:translateY(2px);border-bottom-width:1px;}
+  .kb.act{background:var(--surface);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:0.5px;}
+  .kb.act.on{background:rgba(77,159,255,0.2);color:var(--blue);}
+  .kb.undo{background:rgba(255,92,92,0.1);color:var(--bust);font-size:10px;text-transform:uppercase;}
+  .kb.s2{grid-column:span 2;}
+  .reset-lnk{text-align:center;margin-top:8px;}
+  .reset-lnk button{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;}
+
+  /* EDIT */
+  .edit-panel{background:rgba(255,213,0,0.05);border:1px solid rgba(255,213,0,0.2);border-radius:10px;padding:10px;margin-bottom:8px;}
+  .edit-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .edit-title{font-size:11px;font-weight:700;color:#ffd500;text-transform:uppercase;letter-spacing:1px;}
+  .cancel-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;font-family:'DM Sans',sans-serif;}
+  .edit-inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;}
+  .edit-dart{display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .edit-dart label{font-size:9px;color:var(--muted);text-transform:uppercase;}
+  .edit-dart input{width:100%;padding:7px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:14px;text-align:center;outline:none;}
+  .edit-dart input:focus{border-color:#ffd500;}
+  .mult-btns{display:flex;gap:2px;}
+  .mb{padding:2px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted);font-size:9px;cursor:pointer;font-weight:600;font-family:'DM Sans',sans-serif;}
+  .mb.on{background:rgba(77,159,255,0.2);color:var(--blue);border-color:var(--blue);}
+  .upd-btn{width:100%;padding:9px;background:#ffd500;color:#0f0f13;font-weight:700;font-size:12px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;font-family:'DM Sans',sans-serif;}
+
+  /* MODAL */
+  .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:340px;}
+  .modal h3{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;text-align:center;margin-bottom:6px;}
+  .modal p{text-align:center;color:var(--muted);font-size:12px;margin-bottom:16px;}
+  .modal-score-lbl{font-size:10px;color:var(--muted);text-align:center;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;}
+  .modal-score-inp{width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:22px;text-align:center;outline:none;margin-bottom:16px;}
+  .modal-score-inp:focus{border-color:var(--accent);}
+  .modal-btns{display:flex;gap:8px;}
+  .modal-cancel{flex:1;padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-weight:700;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;}
+  .modal-confirm{flex:1;padding:11px;background:var(--bust);border:none;border-radius:8px;color:white;font-weight:700;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;}
+
+  /* STATS */
+  #stats{background:var(--bg);}
+  .stats-body{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;max-width:480px;width:100%;margin:0 auto;}
+  .sg-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;}
+  .sg-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .sg-date{font-size:10px;color:var(--muted);}
+  .sg-mode{font-size:9px;text-transform:uppercase;letter-spacing:1px;padding:2px 7px;background:var(--surface2);border-radius:10px;color:var(--muted);}
+  .sg-winner{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;}
+  .sg-players{display:flex;flex-direction:column;gap:5px;}
+  .sp{background:var(--surface2);border-radius:7px;padding:7px 9px;}
+  .sp-name{font-size:11px;font-weight:600;margin-bottom:3px;}
+  .sp-name .won{color:var(--accent);}
+  .sp-name .lost{color:var(--muted);}
+  .sp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;}
+  .sp-cell{text-align:center;}
+  .sp-val{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;}
+  .sp-lbl{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+  .no-stats{text-align:center;padding:40px;color:var(--muted);font-size:13px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SPLASH -->
+  <div id="splash" class="screen active">
+    <div class="splash-bullseye"><div class="bull-center"></div></div>
+    <div class="splash-title">DARTS</div>
+    <div class="splash-sub">Scorekeeper</div>
+    <button class="splash-btn" onclick="goSettings()">Set Up Game</button>
+    <button class="splash-stats-btn" onclick="goStats()">View Stats</button>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="settings" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="goSplash()">&#8592;</button>
+      <h2>Settings</h2>
+    </div>
+    <div class="scroll-body">
+      <div class="card">
+        <h3>Game Mode</h3>
+        <div class="toggle-group">
+          <button class="tog" id="m-single" onclick="setMode('single')">Single Player</button>
+          <button class="tog on" id="m-two" onclick="setMode('twoTeams')">Two Teams</button>
+        </div>
+      </div>
+      <div class="card" id="solo-sec" style="display:none">
+        <h3>Solo Player</h3>
+        <div class="lbl">Player Name</div>
+        <input class="inp" id="solo-name" value="Solo Player"/>
+      </div>
+      <div class="card" id="teams-sec">
+        <h3>Teams</h3>
+        <div style="margin-bottom:10px">
+          <div class="lbl">Team 1 Name</div>
+          <input class="inp" id="t1-name" value="Team 1"/>
+        </div>
+        <div>
+          <div class="lbl">Team 2 Name</div>
+          <input class="inp" id="t2-name" value="Team 2"/>
+        </div>
+      </div>
+      <div class="card" id="players-sec">
+        <h3>Players per Team</h3>
+        <div class="counter-row">
+          <span style="font-size:12px;color:var(--muted)">Players per team</span>
+          <div class="counter-ctrl">
+            <button class="cnt-btn" onclick="chgPC(-1)">&#8722;</button>
+            <span class="cnt-val" id="pc-val">1</span>
+            <button class="cnt-btn" onclick="chgPC(1)">+</button>
+          </div>
+        </div>
+        <div id="player-inputs"></div>
+      </div>
+      <button class="start-btn" onclick="startGame()">Start Game</button>
+      <div style="height:14px"></div>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game" class="screen">
+    <div class="game-hdr">
+      <div class="game-title" id="g-title">501 Darts</div>
+      <div class="hdr-btns">
+        <button class="ico-btn" onclick="goStats()" title="Stats">&#128202;</button>
+        <button class="ico-btn" onclick="goSettings()" title="Settings">&#9881;&#65039;</button>
+      </div>
+    </div>
+    <div id="banner" class="banner"></div>
+    <div id="win-banner" class="win-banner" style="display:none"></div>
+    <div class="game-body">
+      <div id="scoreboard" class="scoreboard two"></div>
+      <div class="bot-panel">
+        <div class="panel-in" id="panel-in"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div id="stats" class="screen">
+    <div class="top-bar">
+      <button class="back-btn" onclick="goBack()">&#8592;</button>
+      <h2 style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px">Statistics</h2>
+    </div>
+    <div class="stats-body" id="stats-body"></div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const K = { cfg:'darts_cfg', ag:'darts_ag', cg:'darts_cg' };
+
+let C = {
+  gameMode:'twoTeams', soloPlayerName:'Solo Player',
+  t1:'Team 1', t2:'Team 2', pc:1,
+  t1p:['P1'], t2p:['P1']
+};
+let G = null;
+let U = {
+  at:'Team One', rpi:0,
+  darts:['','',''], mults:[1,1,1],
+  cdi:0, cm:1, kv:true, et:null,
+  gst:Date.now(), ls:'', sci:'501'
+};
+let _prevScreen = 'splash';
+
+// ============================================================
+// CHECKOUT TABLES
+// ============================================================
+const PRO3={170:"T20 T20 Bull",167:"T20 T19 Bull",164:"T20 T18 Bull",161:"T20 T17 Bull",160:"T20 T20 D20",158:"T20 T20 D19",157:"T20 T19 D20",156:"T20 T20 D18",155:"T20 T19 D19",154:"T20 T18 D20",153:"T20 T19 D18",152:"T20 T20 D16",151:"T20 T17 D20",150:"T20 T18 D18",149:"T20 T19 D16",148:"T20 T16 D20",147:"T20 T17 D18",146:"T20 T18 D16",145:"T20 T15 D20",144:"T20 T20 D12",143:"T20 T17 D16",142:"T20 T14 D20",141:"T20 T19 D12",140:"T20 T16 D16",139:"T20 T13 D20",138:"T20 T18 D12",137:"T19 T16 D16",136:"T20 T20 D8",135:"T20 T17 D12",134:"T20 T14 D16",133:"T20 T19 D8",132:"Bull T14 D20",131:"T20 T13 D16",130:"T20 T18 D8",129:"T19 T16 D12",128:"T18 T14 D16",127:"T20 T17 D8",126:"T19 T19 D6",125:"Bull25 T20 D20",124:"T20 D16 D16",123:"T19 T16 D9",122:"T18 T20 D4",121:"T20 T11 D14",120:"T20 20 D20",119:"T19 T10 D16",118:"T20 18 D20",117:"T20 17 D20",116:"T20 16 D20",115:"T20 15 D20",114:"T20 14 D20",113:"T20 13 D20",112:"T20 12 D20",111:"T20 19 D16",110:"T20 10 D20",109:"T20 9 D20",108:"T20 16 D16",107:"T19 10 D20",106:"T20 10 D18",105:"T20 13 D16",104:"T18 10 D20",103:"T20 3 D20",102:"T20 10 D16",101:"T17 10 D20",100:"T20 D20",99:"T19 10 D16"};
+const U100={98:"T20 D19",97:"T19 D20",96:"T20 D18",95:"T19 D19",94:"T18 D20",93:"T19 D18",92:"T20 D16",91:"T17 D20",90:"T18 D18",89:"T19 D16",88:"T16 D20",87:"T17 D18",86:"T18 D16",85:"T15 D20",84:"T20 D12",83:"T17 D16",82:"T14 D20",81:"T19 D12",80:"T20 D10",79:"T13 D20",78:"T18 D12",77:"T19 D10",76:"T20 D8",75:"T17 D12",74:"T14 D16",73:"T19 D8",72:"T16 D12",71:"T13 D16",70:"T18 D8",69:"T19 D6",68:"T20 D4",67:"T17 D8",66:"T10 D18",65:"T19 D4",64:"T16 D8",63:"T13 D12",62:"T10 D16",61:"T15 D8",60:"20 D20",59:"19 D20",58:"18 D20",57:"17 D20",56:"16 D20",55:"15 D20",54:"14 D20",53:"13 D20",52:"12 D20",51:"11 D20",50:"Bull",49:"9 D20",48:"16 D16",47:"7 D20",46:"6 D20",45:"5 D20",44:"4 D20",43:"3 D20",42:"2 D20",41:"9 D16",40:"D20",39:"7 D16",38:"D19",37:"5 D16",36:"D18",35:"3 D16",34:"D17",33:"1 D16",32:"D16",31:"15 D8",30:"D15",29:"13 D8",28:"D14",27:"11 D8",26:"D13",25:"9 D8",24:"D12",23:"7 D8",22:"D11",21:"5 D8",20:"D10",19:"3 D8",18:"D9",17:"1 D8",16:"D8",15:"7 D4",14:"D7",13:"5 D4",12:"D6",11:"3 D4",10:"D5",9:"1 D4",8:"D4",7:"3 D2",6:"D3",5:"1 D2",4:"D2",3:"1 D1",2:"D1"};
+const NOC=new Set([169,168,166,165,163,162,159]);
+function co(r,dl=3){if(r===0||r<2||r>170)return null;if(NOC.has(r))return null;if(dl>=3){if(r>=99&&PRO3[r])return PRO3[r];if(U100[r])return U100[r];}if(dl===2)return PRO3[r]||U100[r]||null;return PRO3[r]||U100[r]||null;}
+
+// ============================================================
+// GAME LOGIC
+// ============================================================
+function newGame(s){return{ss:s,teams:{'Team One':{rem:s,turns:[]},'Team Two':{rem:s,turns:[]}},winner:null};}
+function calcTurn(pr,darts,mults,tn){
+  let rem=pr,bust=false,total=0;
+  for(let i=0;i<darts.length;i++){
+    const s=darts[i],m=mults[i]||1;
+    if(bust||rem===0)break;
+    const nx=rem-s;
+    if(nx<0||nx===1){bust=true;}
+    else if(nx===0){if(m===2||s===50)rem=0;else bust=true;}
+    else{rem=nx;}
+    if(bust){rem=pr;total=0;break;}
+    else total+=s;
+  }
+  return{tn,darts,mults,total,rem,bust};
+}
+function doAddTurn(gs,team,darts,mults){
+  const ts=gs.teams[team];
+  const t=calcTurn(ts.rem,darts,mults,ts.turns.length+1);
+  const nt={rem:t.rem,turns:[...ts.turns,t]};
+  const ng={...gs,teams:{...gs.teams,[team]:nt}};
+  if(t.rem===0&&!t.bust)ng.winner=team;
+  return{game:ng,turn:t};
+}
+function doEditTurn(gs,team,tn,nd,nm){
+  const ts={...gs.teams[team],turns:[...gs.teams[team].turns]};
+  const idx=tn-1;
+  ts.turns[idx]={...ts.turns[idx],darts:nd,mults:nm};
+  let rem=gs.ss;
+  for(let i=0;i<ts.turns.length;i++){
+    const t=ts.turns[i];const m=t.mults||[1,1,1];
+    ts.turns[i]=calcTurn(rem,t.darts,m,t.tn);
+    rem=ts.turns[i].rem;
+  }
+  ts.rem=rem;
+  const ng={...gs,teams:{...gs.teams,[team]:ts}};
+  const t1d=ng.teams['Team One'].rem===0,t2d=ng.teams['Team Two'].rem===0;
+  if(t1d&&!t2d)ng.winner='Team One';
+  else if(!t1d&&t2d)ng.winner='Team Two';
+  else ng.winner=null;
+  return ng;
+}
+
+// ============================================================
+// STORAGE
+// ============================================================
+function saveAG(){if(!G||G.winner){localStorage.removeItem(K.ag);return;}try{localStorage.setItem(K.ag,JSON.stringify({G,U,C}));}catch(e){}}
+function loadAG(){try{const d=localStorage.getItem(K.ag);if(!d)return false;const p=JSON.parse(d);if(p.G&&!p.G.winner){G=p.G;U=p.U;C=p.C;return true;}}catch(e){}return false;}
+function saveCG(cg){let gs=[];try{gs=JSON.parse(localStorage.getItem(K.cg)||'[]');}catch(e){}gs.unshift(cg);localStorage.setItem(K.cg,JSON.stringify(gs.slice(0,50)));}
+function loadCGs(){try{return JSON.parse(localStorage.getItem(K.cg)||'[]');}catch(e){return[];}}
+function saveCfg(){try{localStorage.setItem(K.cfg,JSON.stringify(C));}catch(e){}}
+function loadCfg(){try{const d=localStorage.getItem(K.cfg);if(d)C={...C,...JSON.parse(d)};}catch(e){}}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function sw(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function goSplash(){_prevScreen='splash';sw('splash');}
+function goSettings(){_prevScreen='settings';sw('settings');renderCfgForm();}
+function goStats(){_prevScreen='stats';sw('stats');renderStats();}
+function goGame(){_prevScreen='game';sw('game');renderGame();}
+function goBack(){if(_prevScreen==='game')goGame();else goSplash();}
+
+// ============================================================
+// SETTINGS FORM
+// ============================================================
+let _pc=1;
+function renderCfgForm(){
+  _pc=C.pc;
+  document.getElementById('m-single').classList.toggle('on',C.gameMode==='single');
+  document.getElementById('m-two').classList.toggle('on',C.gameMode==='twoTeams');
+  document.getElementById('solo-name').value=C.soloPlayerName;
+  document.getElementById('t1-name').value=C.t1;
+  document.getElementById('t2-name').value=C.t2;
+  document.getElementById('pc-val').textContent=_pc;
+  document.getElementById('solo-sec').style.display=C.gameMode==='single'?'block':'none';
+  document.getElementById('teams-sec').style.display=C.gameMode==='twoTeams'?'block':'none';
+  document.getElementById('players-sec').style.display=C.gameMode==='twoTeams'?'block':'none';
+  renderPInputs();
+}
+function renderPInputs(){
+  const el=document.getElementById('player-inputs');
+  const t1=document.getElementById('t1-name').value||'Team 1';
+  const t2=document.getElementById('t2-name').value||'Team 2';
+  let h=`<div class="player-block"><div class="player-lbl">${t1} Players</div>`;
+  for(let i=0;i<_pc;i++)h+=`<input class="inp" id="t1p${i}" value="${C.t1p[i]||'P'+(i+1)}" placeholder="Player ${i+1}"/>`;
+  h+=`</div><div class="player-block"><div class="player-lbl">${t2} Players</div>`;
+  for(let i=0;i<_pc;i++)h+=`<input class="inp" id="t2p${i}" value="${C.t2p[i]||'P'+(i+1)}" placeholder="Player ${i+1}"/>`;
+  h+='</div>';el.innerHTML=h;
+}
+function setMode(m){
+  C.gameMode=m;
+  document.getElementById('m-single').classList.toggle('on',m==='single');
+  document.getElementById('m-two').classList.toggle('on',m==='twoTeams');
+  document.getElementById('solo-sec').style.display=m==='single'?'block':'none';
+  document.getElementById('teams-sec').style.display=m==='twoTeams'?'block':'none';
+  document.getElementById('players-sec').style.display=m==='twoTeams'?'block':'none';
+}
+function chgPC(d){_pc=Math.max(1,Math.min(4,_pc+d));document.getElementById('pc-val').textContent=_pc;renderPInputs();}
+function startGame(){
+  C.soloPlayerName=document.getElementById('solo-name').value||'Solo Player';
+  C.t1=document.getElementById('t1-name').value||'Team 1';
+  C.t2=document.getElementById('t2-name').value||'Team 2';
+  C.pc=_pc;C.t1p=[];C.t2p=[];
+  for(let i=0;i<_pc;i++){C.t1p.push(document.getElementById('t1p'+i)?.value||'P'+(i+1));C.t2p.push(document.getElementById('t2p'+i)?.value||'P'+(i+1));}
+  saveCfg();
+  initGame(501);
+  goGame();
+}
+
+// ============================================================
+// GAME INIT
+// ============================================================
+function initGame(s){
+  G=newGame(s||parseInt(U.sci)||501);
+  U={at:'Team One',rpi:0,darts:['','',''],mults:[1,1,1],cdi:0,cm:1,kv:true,et:null,gst:Date.now(),ls:'',sci:String(s||501)};
+  localStorage.removeItem(K.ag);
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function dn(k){if(C.gameMode==='single')return C.soloPlayerName;return k==='Team One'?C.t1:C.t2;}
+
+function renderGame(){
+  if(!G)return;
+  document.getElementById('g-title').textContent=G.ss+' Darts';
+  const bEl=document.getElementById('banner'),wEl=document.getElementById('win-banner');
+  if(G.winner){bEl.style.display='none';wEl.style.display='block';wEl.textContent='🏆 '+dn(G.winner)+' Wins! 🏆';}
+  else{bEl.style.display='flex';wEl.style.display='none';bEl.textContent=mkBanner();}
+  const sb=document.getElementById('scoreboard');
+  sb.className='scoreboard '+(C.gameMode==='single'?'single':'two');
+  const teams=C.gameMode==='single'?['Team One']:['Team One','Team Two'];
+  sb.innerHTML=teams.map(t=>mkTeamCol(t)).join('');
+  mkPanel();saveAG();
+}
+
+function mkTeamCol(tk){
+  const ts=G.teams[tk];
+  const isAct=C.gameMode==='single'?true:(U.at===tk&&!G.winner&&!U.et);
+  const nm=dn(tk);
+  const th=ts.turns.length===0
+    ?'<div class="no-turns">No turns yet</div>'
+    :[...ts.turns].reverse().map(t=>`
+      <div class="turn-item${t.bust?' bust':''}" onclick="startEdit('${tk}',${t.tn})">
+        <div>
+          <div class="t-num">#${t.tn}</div>
+          <div class="t-darts">${t.darts.map(d=>`<span class="d-chip">${d}</span>`).join('')}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="t-pts">${t.total}pts</div>
+          <div>${t.bust?'<span class="bust-tag">BUST</span>':`<span class="t-rem">${t.rem}</span>`}</div>
+        </div>
+      </div>`).join('');
+  return`<div class="team-col${isAct?' active':''}">
+    <div class="team-col-hdr"><div class="team-name">${nm}</div><div class="team-score">${ts.rem}</div></div>
+    <div class="turns-list">${th}</div>
+  </div>`;
+}
+
+function mkBanner(){
+  if(!G)return'';
+  const t1=G.teams['Team One'],t2=G.teams['Team Two'];let tk;
+  if(C.gameMode==='single'){if(t1.turns.length===0)return`New ${G.ss} game started.`;tk='Team One';}
+  else{const l1=t1.turns.length,l2=t2.turns.length;if(l1===0&&l2===0)return`New ${G.ss} game started.`;if(l1>l2)tk='Team One';else if(l2>l1)tk='Team Two';else tk='Team Two';}
+  const ts=G.teams[tk],lt=ts.turns[ts.turns.length-1];if(!lt)return'';
+  const nm=dn(tk);
+  if(lt.bust)return`${nm} busted [${lt.darts.join(', ')}] — ${lt.rem} remaining.`;
+  if(lt.rem===0)return`${nm} checked out!`;
+  return`${nm} scored ${lt.total} [${lt.darts.join(', ')}] — ${lt.rem} remaining.`;
+}
+
+function mkPanel(){
+  const el=document.getElementById('panel-in');
+  if(U.et){el.innerHTML=mkEditPanel();return;}
+  if(G.winner){el.innerHTML=`<div class="reset-lnk" style="margin:0"><button onclick="showResetModal()">Start New Game</button></div>`;return;}
+  const rem=G.teams[U.at].rem;
+  const cout=co(rem,Math.max(0,3-U.cdi));
+  const sn=C.gameMode==='single'?C.soloPlayerName:(U.at==='Team One'?C.t1p[U.rpi]:C.t2p[U.rpi]);
+  const tl=C.gameMode==='single'?'':dn(U.at)+' — ';
+  const dd=[0,1,2].map(i=>{const v=U.darts[i]?(parseInt(U.darts[i])*U.mults[i]).toString():'';const cls=i===U.cdi?'cur':v?'fil':'emp';return`<div class="dart-slot ${cls}">${v}</div>`;}).join('');
+  const ml=U.cm===1?'Single':U.cm===2?'Double':'Triple';
+  const ima=U.cm>1;
+  let kp='';
+  if(U.kv){
+    const nr=ns=>ns.map(n=>`<button class="kb" onclick="pNum(${n})">${n}</button>`).join('');
+    kp=`<div class="dart-status">
+      <span class="d-badge cur">Dart ${U.cdi+1}</span>
+      <span class="d-badge ${ima?'mult':''}">${ml}</span>
+    </div>
+    <div class="keypad">
+      ${nr([1,2,3,4,5,6,7])}
+      ${nr([8,9,10,11,12,13,14])}
+      ${nr([15,16,17,18,19,20,25])}
+      <button class="kb" onclick="pNum(0)">0</button>
+      <button class="kb act s2 ${U.cm===2?'on':''}" onclick="pMult(2)">Double</button>
+      <button class="kb act s2 ${U.cm===3?'on':''}" onclick="pMult(3)">Triple</button>
+      <button class="kb undo s2" onclick="pUndo()">Undo</button>
+    </div>`;
+  }
+  el.innerHTML=`
+    <div class="shooter-lbl">Shooter: <span class="shooter-name">${tl}${sn}</span></div>
+    ${cout?`<div class="co-box"><div class="co-lbl">Checkout</div><div class="co-val">${cout}</div></div>`:''}
+    <div class="darts-disp">${dd}</div>
+    <button class="tog-kp-btn" onclick="togKP()">${U.kv?'&#9660; Hide':'&#9650; Show'} Keypad</button>
+    ${kp}
+    <div class="reset-lnk"><button onclick="showResetModal()">Reset / New Game</button></div>
+  `;
+}
+
+function mkEditPanel(){
+  const et=U.et;
+  const lbl=C.gameMode==='single'?`Turn ${et.tn}`:`${dn(et.team)} — Turn ${et.tn}`;
+  const di=[0,1,2].map(i=>`
+    <div class="edit-dart">
+      <label>Dart ${i+1}</label>
+      <input type="tel" id="ed${i}" value="${U.darts[i]}" placeholder="0"/>
+      <div class="mult-btns">
+        ${[1,2,3].map(m=>`<button class="mb ${U.mults[i]===m?'on':''}" onclick="setEM(${i},${m})">x${m}</button>`).join('')}
+      </div>
+    </div>`).join('');
+  return`<div class="edit-panel">
+    <div class="edit-hdr">
+      <span class="edit-title">Editing ${lbl}</span>
+      <button class="cancel-btn" onclick="cancelEdit()">Cancel</button>
+    </div>
+    <div class="edit-inputs">${di}</div>
+    <button class="upd-btn" onclick="submitEdit()">Update Turn</button>
+  </div>`;
+}
+
+// ============================================================
+// KEYPAD
+// ============================================================
+function pNum(n){
+  if(!G||G.winner)return;
+  const nd=[...U.darts];nd[U.cdi]=n.toString();
+  const nm=[...U.mults];nm[U.cdi]=U.cm;
+  U.darts=nd;U.mults=nm;
+  if(U.cdi===2){
+    const vals=nd.map((d,i)=>(parseInt(d)||0)*nm[i]);
+    const res=doAddTurn(G,U.at,vals,nm);G=res.game;
+    if(G.winner){saveStats(G);localStorage.removeItem(K.ag);}
+    else{
+      const prev=U.at;const next=U.at==='Team One'?'Team Two':'Team One';
+      if(C.gameMode==='twoTeams'){if(prev==='Team Two'&&next==='Team One')U.rpi=(U.rpi+1)%C.pc;U.at=next;}
+    }
+    U.darts=['','',''];U.mults=[1,1,1];U.cdi=0;U.cm=1;U.kv=true;
+  }else{U.cdi++;U.cm=1;}
+  renderGame();
+}
+function pMult(m){U.cm=U.cm===m?1:m;renderGame();}
+function pUndo(){if(U.cdi>0){U.cdi--;const nd=[...U.darts];nd[U.cdi]='';U.darts=nd;const nm=[...U.mults];nm[U.cdi]=1;U.mults=nm;U.cm=1;}renderGame();}
+function togKP(){U.kv=!U.kv;renderGame();}
+
+// ============================================================
+// EDIT
+// ============================================================
+function startEdit(tk,tn){
+  if(G.winner)return;
+  const ts=G.teams[tk];const turn=ts.turns.find(t=>t.tn===tn);if(!turn)return;
+  U.et={team:tk,tn};
+  const mults=turn.mults||[1,1,1];
+  const rd=turn.darts.map((d,i)=>String(d/(mults[i]||1)));
+  U.darts=[rd[0],rd[1],rd[2]];U.mults=[...mults];
+  renderGame();
+}
+function setEM(i,m){U.mults[i]=m;mkPanel();}
+function submitEdit(){
+  const et=U.et;if(!et)return;
+  const vals=[0,1,2].map(i=>(parseFloat(document.getElementById('ed'+i)?.value||'0')||0)*U.mults[i]);
+  G=doEditTurn(G,et.team,et.tn,vals,U.mults);
+  U.et=null;U.darts=['','',''];U.mults=[1,1,1];renderGame();
+}
+function cancelEdit(){U.et=null;U.darts=['','',''];U.mults=[1,1,1];renderGame();}
+
+// ============================================================
+// RESET MODAL
+// ============================================================
+let _m=null;
+function showResetModal(){
+  const m=document.createElement('div');
+  m.className='modal-ov';
+  m.innerHTML=`<div class="modal">
+    <h3>Reset Game?</h3>
+    <p>Current progress will be lost.</p>
+    <div class="modal-score-lbl">Starting Score</div>
+    <input type="number" class="modal-score-inp" id="rs" value="${U.sci}"/>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmReset()">Reset</button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);_m=m;
+}
+function closeModal(){if(_m){_m.remove();_m=null;}}
+function confirmReset(){
+  const s=parseInt(document.getElementById('rs')?.value)||501;
+  U.sci=String(s);closeModal();initGame(s);renderGame();
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function saveStats(fg){
+  if(!fg.winner)return;const players=[];
+  const ap=tk=>{
+    if(C.gameMode==='single'&&tk==='Team Two')return;
+    const ts=fg.teams[tk];const tname=dn(tk);const ns=tk==='Team One'?C.t1p:C.t2p;
+    if(C.gameMode==='single'){players.push(mkPS(ts.turns,C.soloPlayerName,undefined,'Won'));}
+    else{ns.forEach((n,pi)=>{const pt=ts.turns.filter((_,i)=>i%C.pc===pi);players.push(mkPS(pt,n,tname,fg.winner===tk?'Won':'Lost'));});}
+  };
+  ap('Team One');ap('Team Two');
+  saveCG({id:Date.now().toString(),date:new Date(U.gst).toISOString(),gameMode:C.gameMode,ss:fg.ss,winner:dn(fg.winner),tt:fg.teams['Team One'].turns.length+fg.teams['Team Two'].turns.length,players});
+}
+function mkPS(turns,name,teamName,outcome){
+  let total=0,darts=0,best=0,busts=0;
+  turns.forEach(t=>{if(t.bust){busts++;darts+=t.darts.length;}else{total+=t.total;darts+=t.darts.length;if(t.total>best)best=t.total;}});
+  return{name,teamName,total,darts,apd:darts>0?parseFloat((total/darts).toFixed(2)):0,apt:turns.length>0?parseFloat((total/turns.length).toFixed(2)):0,best,busts,outcome};
+}
+function renderStats(){
+  const gs=loadCGs();const el=document.getElementById('stats-body');
+  if(gs.length===0){el.innerHTML='<div class="no-stats">No completed games yet.<br>Finish a game to see your stats here.</div>';return;}
+  el.innerHTML=gs.map(g=>{
+    const dt=new Date(g.date).toLocaleDateString('en-CA',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    const ph=g.players.map(p=>`
+      <div class="sp">
+        <div class="sp-name"><span class="${p.outcome==='Won'?'won':'lost'}">${p.outcome==='Won'?'🏆 ':''} ${p.name}${p.teamName?' ('+p.teamName+')':''}</span></div>
+        <div class="sp-grid">
+          <div class="sp-cell"><div class="sp-val">${p.apt}</div><div class="sp-lbl">Avg/Turn</div></div>
+          <div class="sp-cell"><div class="sp-val">${p.apd}</div><div class="sp-lbl">Avg/Dart</div></div>
+          <div class="sp-cell"><div class="sp-val">${p.best}</div><div class="sp-lbl">Best</div></div>
+          <div class="sp-cell"><div class="sp-val">${p.busts}</div><div class="sp-lbl">Busts</div></div>
+        </div>
+      </div>`).join('');
+    return`<div class="sg-card">
+      <div class="sg-hdr"><span class="sg-date">${dt}</span><span class="sg-mode">${g.gameMode==='single'?'Solo':'2 Teams'} · ${g.ss}</span></div>
+      <div class="sg-winner">🏆 ${g.winner}</div>
+      <div class="sg-players">${ph}</div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+loadCfg();
+if(loadAG()){goGame();}else{goSplash();}
+</script>
+</body>
+</html>
